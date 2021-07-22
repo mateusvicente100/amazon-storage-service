@@ -41,7 +41,7 @@ begin
   TAmazonStorageServiceConfig.GetInstance.SecretKey := 'your-secret-key';
   TAmazonStorageServiceConfig.GetInstance.Region := TAmazonRegion.YourRegion;  
   TAmazonStorageServiceConfig.GetInstance.MainBucketName := 'your-main-bucket-name'; // Optional
-  TAmazonStorageServiceConfig.GetInstance.Inicializar;
+  TAmazonStorageServiceConfig.GetInstance.Initialize;
 end;
 ```
 
@@ -56,10 +56,85 @@ var
   I: Integer;
 begin
   LBuckets := TAmazonStorageService.New.ListBuckets;
-  try    
+  try     
     for I := 0 to Pred(LBuckets.Count) do
       memoLog.Lines.Add(LBuckets.Names[I]);
   finally
     LBuckets.Free;
   end;
+end;  
+```
+
+## Create a bucket
+
+You can create a bucket sending the bucket name 
+
+```pascal
+procedure CreateBucket(const ABucketName: string);
+begin
+  TAmazonStorageService.New.CreateBucket(ABucketName);
+end;  
+```
+
+## Delete a bucket
+
+You can delete a bucket sending the bucket name 
+
+```pascal
+procedure CreateBucket(const ABucketName: string);
+begin
+  TAmazonStorageService.New.DeleteBucket(ABucketName);
+end;  
+```
+
+## List files from a bucket
+
+You can list all files from one specific bucket
+
+```pascal
+procedure ListAllFilesFromBucket(const ABucketName: string);
+var
+  LFiles: TAmazonBucketResult;
+  LFile: TAmazonObjectResult;
+begin
+  LFiles := TAmazonStorageService.New.GetBucket(ABucketName);
+  try    
+    for LFile in LFiles.Objects do    
+      memoLog.Lines.Add(LFile.Name);      
+  finally
+    LFiles.Free;
+  end;
+```
+
+## Upload a file
+
+You can upload a file using the file directory and main bucket name or using a specific bucket name
+
+```pascal
+procedure UploadFile(const AFileDirectory: string);
+begin
+  TAmazonStorageService.New.UploadFile(AFileDirectory);
+end;  
+```
+
+## Delete a file
+
+You can delete a file using the file name and main bucket name or using a specific bucket name
+
+```pascal
+procedure DeleteFile(const AFileName: string);
+begin
+  TAmazonStorageService.New.DeleteFile(AFileName);
+end;  
+```
+
+## Download a file
+
+You can download a file using the file name with the bucket main name or using a specific bucket name
+
+```pascal
+procedure DownloadFile(const AFileName: string);
+begin
+  TAmazonStorageService.New.DownloadFile(AFileName);
+end;  
 ```
