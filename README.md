@@ -32,7 +32,7 @@ You need to use Amazon.Storage.Service
 uses Amazon.Storage.Service;
 ```
 
-First of all you need at once configure the amazon settings to connect in the server
+First of all you need at once configure the amazon settings to connect in the server. This sould be done on start of your program.
 
 ```pascal
 procedure InitializeAmazonService;
