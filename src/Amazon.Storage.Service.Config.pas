@@ -23,7 +23,7 @@ type
     property Region: TAmazonRegion read GetAmazonRegion write SetAmazonRegion;
     property MainBucketName: string read FMainBucketName write FMainBucketName;
     function GetStorage: TAmazonStorageService;
-    procedure Inicializar;
+    procedure Initialize;
     class function NewInstance: TObject; override;
     class function GetInstance: TAmazonStorageServiceConfig;
     destructor Destroy; override;
@@ -74,7 +74,7 @@ begin
   Result := FConnectionInfo.AccountKey;
 end;
 
-procedure TAmazonStorageServiceConfig.Inicializar;
+procedure TAmazonStorageServiceConfig.Initialize;
 begin
   if Assigned(FStorage) then
     FStorage.Free;
