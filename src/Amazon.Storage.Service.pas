@@ -12,7 +12,7 @@ type
   TAmazonObjectResult = Amazon.Storage.Service.API.TAmazonObjectResult;
   TAmazonStorageService = class(TInterfacedObject, IAmazonStorageService)
   private
-    function Storage: Amazon.Storage.Service.API.TAmazonStorageService;
+    FStorage: Amazon.Storage.Service.API.TAmazonStorageService;
     function Configuration: TAmazonStorageServiceConfig;
     function GetBucketName(const ABucketName: string): string;
     function GetFileContentType(const AFilePath: string): string;
@@ -24,18 +24,15 @@ type
     procedure UploadFile(const AFilePath: string; const ABucketName: string = ''); overload;
     procedure UploadFile(const AFile: TMemoryStream; AFileName: string; const ABucketName: string = ''); overload;
     procedure DeleteFile(const AFileName: string; const ABucketName: string = '');
+    constructor Create;
   public
     class function New: IAmazonStorageService;
+    destructor Destroy; override;
   end;
 
 implementation
 
 uses Winapi.Windows;
-
-function TAmazonStorageService.Storage: Amazon.Storage.Service.API.TAmazonStorageService;
-begin
-  Result := TAmazonStorageServiceConfig.GetInstance.GetStorage;
-end;
 
 procedure TAmazonStorageService.UploadFile(const AFile: TMemoryStream; AFileName: string; const ABucketName: string);
 var
@@ -81,7 +78,7 @@ begin
     LResponseInfo := TCloudResponseInfo.Create;
     try
       LFileInformation.Add('Content-type=' + GetFileContentType(AFilePath));
-      if not Self.Storage.UploadObject(LBucketName, ExtractFileName(AFilePath), LFileContent, False, LFileInformation, nil,
+      if not FStorage.UploadObject(LBucketName, ExtractFileName(AFilePath), LFileContent, False, LFileInformation, nil,
          TAmazonACLType.amzbaPrivate, LResponseInfo) then
         raise Exception.CreateFmt('%d - %s', [LResponseInfo.StatusCode, LResponseInfo.StatusMessage]);
     finally
@@ -99,13 +96,18 @@ begin
   Result := TAmazonStorageServiceConfig.GetInstance;
 end;
 
+constructor TAmazonStorageService.Create;
+begin
+  FStorage := TAmazonStorageServiceConfig.GetInstance.GetNewStorage;
+end;
+
 procedure TAmazonStorageService.CreateBucket(const ABucketName: string);
 var
   LResponseInfo: TCloudResponseInfo;
 begin
   LResponseInfo := TCloudResponseInfo.Create;
   try
-    Self.Storage.CreateBucket(ABucketName, TAmazonACLType.amzbaPrivate, Self.Configuration.Region, LResponseInfo);
+    FStorage.CreateBucket(ABucketName, TAmazonACLType.amzbaPrivate, Self.Configuration.Region, LResponseInfo);
     if LResponseInfo.StatusCode <> 200 then
       raise Exception.CreateFmt('%d - %s', [LResponseInfo.StatusCode, LResponseInfo.StatusMessage]);
   finally
@@ -119,7 +121,7 @@ var
 begin
   LResponseInfo := TCloudResponseInfo.Create;
   try
-    Self.Storage.DeleteBucket(ABucketName, LResponseInfo, Self.Configuration.Region);
+    FStorage.DeleteBucket(ABucketName, LResponseInfo, Self.Configuration.Region);
     if LResponseInfo.StatusCode <> 204 then
       raise Exception.CreateFmt('%d - %s', [LResponseInfo.StatusCode, LResponseInfo.StatusMessage]);
   finally
@@ -135,11 +137,18 @@ begin
     LBucketName := GetBucketName(ABucketName);
     if LBucketName.Trim.IsEmpty then
       raise Exception.Create('Não foi informado o bucket name de onde o arquivo se encontra!');
-    Self.Storage.DeleteObject(LBucketName, AFileName);
+    FStorage.DeleteObject(LBucketName, AFileName);
   except
     on E:Exception do
       raise Exception.Create('Erro ao excluir o arquivo. O seguinte erro ocorreu: ' + sLineBreak + E.Message);
   end;
+end;
+
+destructor TAmazonStorageService.Destroy;
+begin
+  FStorage.ConnectionInfo.Free;
+  FStorage.Free;
+  inherited;
 end;
 
 function TAmazonStorageService.DownloadFile(const AFileName: string; const ABucketName: string = ''): TMemoryStream;
@@ -152,7 +161,7 @@ begin
     if LBucketName.Trim.IsEmpty then
       raise Exception.Create('Não foi informado o bucket name de onde o arquivo se encontra!');
     Result := TMemoryStream.Create;
-    Self.Storage.GetObject(LBucketName, AFileName, Result);
+    FStorage.GetObject(LBucketName, AFileName, Result);
     Result.Position := 0;
   except
     on E:Exception do
@@ -170,7 +179,7 @@ var
 begin
   LResponseInfo := TCloudResponseInfo.Create;
   try
-    Result := Self.Storage.GetBucket(ABucketName, nil, LResponseInfo);
+    Result := FStorage.GetBucket(ABucketName, nil, LResponseInfo);
     if LResponseInfo.StatusCode <> 200 then
       raise Exception.CreateFmt('%d - %s', [LResponseInfo.StatusCode, LResponseInfo.StatusMessage]);
   finally
@@ -203,7 +212,7 @@ var
 begin
   LResponseInfo := TCloudResponseInfo.Create;
   try
-    Result := Self.Storage.ListBuckets(LResponseInfo);
+    Result := FStorage.ListBuckets(LResponseInfo);
     if LResponseInfo.StatusCode <> 200 then
       raise Exception.CreateFmt('%d - %s', [LResponseInfo.StatusCode, LResponseInfo.StatusMessage]);
   finally

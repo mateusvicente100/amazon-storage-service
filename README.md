@@ -40,8 +40,7 @@ begin
   TAmazonStorageServiceConfig.GetInstance.AccessKey := 'your-access-key';
   TAmazonStorageServiceConfig.GetInstance.SecretKey := 'your-secret-key';
   TAmazonStorageServiceConfig.GetInstance.Region := TAmazonRegion.YourRegion;  
-  TAmazonStorageServiceConfig.GetInstance.MainBucketName := 'your-main-bucket-name'; // Optional
-  TAmazonStorageServiceConfig.GetInstance.Initialize;
+  TAmazonStorageServiceConfig.GetInstance.MainBucketName := 'your-main-bucket-name'; // Optional  
 end;
 ```
 
