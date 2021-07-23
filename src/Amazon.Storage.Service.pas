@@ -3,30 +3,32 @@ unit Amazon.Storage.Service;
 interface
 
 uses Amazon.Storage.Service.Intf, System.Classes, Amazon.Storage.Service.API, Amazon.Storage.Service.Config, System.SysUtils,
-  IdCustomHTTPServer, Data.Cloud.CloudAPI;
+  IdCustomHTTPServer, Data.Cloud.CloudAPI, Amazon.Storage.Service.Types, System.Math;
 
 type
   TAmazonRegion = Amazon.Storage.Service.API.TAmazonRegion;
   TAmazonStorageServiceConfig = Amazon.Storage.Service.Config.TAmazonStorageServiceConfig;
   TAmazonBucketResult = Amazon.Storage.Service.API.TAmazonBucketResult;
   TAmazonObjectResult = Amazon.Storage.Service.API.TAmazonObjectResult;
+  TAmazonProtocol = Amazon.Storage.Service.Types.TAmazonProtocol;
   TAmazonStorageService = class(TInterfacedObject, IAmazonStorageService)
   private
     FStorage: Amazon.Storage.Service.API.TAmazonStorageService;
+    FBucketName: string;
     function Configuration: TAmazonStorageServiceConfig;
-    function GetBucketName(const ABucketName: string): string;
     function GetFileContentType(const AFilePath: string): string;
-    function DownloadFile(const AFileName: string; const ABucketName: string = ''): TMemoryStream;
+    function DownloadFile(const AFileName: string): TMemoryStream;
     function ListBuckets: TStrings;
     function GetBucket(const ABucketName: string): TAmazonBucketResult;
     procedure CreateBucket(const ABucketName: string);
     procedure DeleteBucket(const ABucketName: string);
-    procedure UploadFile(const AFilePath: string; const ABucketName: string = ''); overload;
-    procedure UploadFile(const AFile: TMemoryStream; AFileName: string; const ABucketName: string = ''); overload;
-    procedure DeleteFile(const AFileName: string; const ABucketName: string = '');
-    constructor Create;
+    procedure UploadFile(const AFilePath: string); overload;
+    procedure UploadFile(const AFilePath, AFileName: string); overload;
+    procedure UploadFile(const AFile: TMemoryStream; AFileName: string); overload;
+    procedure DeleteFile(const AFileName: string);
+    constructor Create(const ABucketName: string);
   public
-    class function New: IAmazonStorageService;
+    class function New(const ABucketName: string = ''): IAmazonStorageService;
     destructor Destroy; override;
   end;
 
@@ -34,27 +36,9 @@ implementation
 
 uses Winapi.Windows;
 
-procedure TAmazonStorageService.UploadFile(const AFile: TMemoryStream; AFileName: string; const ABucketName: string);
-var
-  LFilePath: string;
-  LTempFolder: array[0..MAX_PATH] of Char;
-begin
-  GetTempPath(MAX_PATH, @LTempFolder);
-  LFilePath := StrPas(LTempFolder) + AFileName;
-  try
-    AFile.Position := 0;
-    AFile.SaveToFile(LFilePath);
-    UploadFile(LFilePath, ABucketName);
-  finally
-    if FileExists(LFilePath) then
-      DeleteFile(LFilePath);
-  end;
-end;
-
-procedure TAmazonStorageService.UploadFile(const AFilePath, ABucketName: string);
+procedure TAmazonStorageService.UploadFile(const AFilePath, AFileName: string);
 var
   LBinaryReader: TBinaryReader;
-  LBucketName: string;
   LFileContent: TBytes;
   LFileInformation: TStringList;
   LResponseInfo: TCloudResponseInfo;
@@ -63,8 +47,7 @@ begin
     if not FileExists(AFilePath) then
       raise Exception.Create('Não foi possível encontrar o arquivo no diretório informado!');
 
-    LBucketName := GetBucketName(ABucketName);
-    if LBucketName.Trim.IsEmpty then
+    if FBucketName.Trim.IsEmpty then
       raise Exception.Create('Não foi informado o bucket name de onde o arquivo deverá ficar salvo!');
 
     LBinaryReader := TBinaryReader.Create(AFilePath);
@@ -78,7 +61,7 @@ begin
     LResponseInfo := TCloudResponseInfo.Create;
     try
       LFileInformation.Add('Content-type=' + GetFileContentType(AFilePath));
-      if not FStorage.UploadObject(LBucketName, ExtractFileName(AFilePath), LFileContent, False, LFileInformation, nil,
+      if not FStorage.UploadObject(FBucketName, AFileName, LFileContent, False, LFileInformation, nil,
          TAmazonACLType.amzbaPrivate, LResponseInfo) then
         raise Exception.CreateFmt('%d - %s', [LResponseInfo.StatusCode, LResponseInfo.StatusMessage]);
     finally
@@ -91,14 +74,39 @@ begin
   end;
 end;
 
+procedure TAmazonStorageService.UploadFile(const AFile: TMemoryStream; AFileName: string);
+var
+  LFilePath: string;
+  LTempFolder: array[0..MAX_PATH] of Char;
+begin
+  GetTempPath(MAX_PATH, @LTempFolder);
+  LFilePath := StrPas(LTempFolder) + FormatDateTime('hhmmss', Now) + Random(1000).ToString + AFileName;
+  try
+    AFile.Position := 0;
+    AFile.SaveToFile(LFilePath);
+    Self.UploadFile(LFilePath, AFileName);
+  finally
+    if FileExists(LFilePath) then
+      DeleteFile(LFilePath);
+  end;
+end;
+
+procedure TAmazonStorageService.UploadFile(const AFilePath: string);
+begin
+  Self.UploadFile(AFilePath, ExtractFileName(AFilePath));
+end;
+
 function TAmazonStorageService.Configuration: TAmazonStorageServiceConfig;
 begin
   Result := TAmazonStorageServiceConfig.GetInstance;
 end;
 
-constructor TAmazonStorageService.Create;
+constructor TAmazonStorageService.Create(const ABucketName: string);
 begin
   FStorage := TAmazonStorageServiceConfig.GetInstance.GetNewStorage;
+  FBucketName := ABucketName;
+  if ABucketName.Trim.IsEmpty then
+    FBucketName := Self.Configuration.MainBucketName;
 end;
 
 procedure TAmazonStorageService.CreateBucket(const ABucketName: string);
@@ -129,15 +137,12 @@ begin
   end;
 end;
 
-procedure TAmazonStorageService.DeleteFile(const AFileName, ABucketName: string);
-var
-  LBucketName: string;
+procedure TAmazonStorageService.DeleteFile(const AFileName: string);
 begin
   try
-    LBucketName := GetBucketName(ABucketName);
-    if LBucketName.Trim.IsEmpty then
+    if FBucketName.Trim.IsEmpty then
       raise Exception.Create('Não foi informado o bucket name de onde o arquivo se encontra!');
-    FStorage.DeleteObject(LBucketName, AFileName);
+    FStorage.DeleteObject(FBucketName, AFileName);
   except
     on E:Exception do
       raise Exception.Create('Erro ao excluir o arquivo. O seguinte erro ocorreu: ' + sLineBreak + E.Message);
@@ -151,17 +156,14 @@ begin
   inherited;
 end;
 
-function TAmazonStorageService.DownloadFile(const AFileName: string; const ABucketName: string = ''): TMemoryStream;
-var
-  LBucketName: string;
+function TAmazonStorageService.DownloadFile(const AFileName: string): TMemoryStream;
 begin
   Result := nil;
   try
-    LBucketName := GetBucketName(ABucketName);
-    if LBucketName.Trim.IsEmpty then
+    if FBucketName.Trim.IsEmpty then
       raise Exception.Create('Não foi informado o bucket name de onde o arquivo se encontra!');
     Result := TMemoryStream.Create;
-    FStorage.GetObject(LBucketName, AFileName, Result);
+    FStorage.GetObject(FBucketName, AFileName, Result);
     Result.Position := 0;
   except
     on E:Exception do
@@ -185,13 +187,6 @@ begin
   finally
     LResponseInfo.Free;
   end;
-end;
-
-function TAmazonStorageService.GetBucketName(const ABucketName: string): string;
-begin
-  Result := ABucketName;
-  if ABucketName.Trim.IsEmpty then
-    Result := Self.Configuration.MainBucketName;
 end;
 
 function TAmazonStorageService.GetFileContentType(const AFilePath: string): string;
@@ -220,9 +215,9 @@ begin
   end;
 end;
 
-class function TAmazonStorageService.New: IAmazonStorageService;
+class function TAmazonStorageService.New(const ABucketName: string = ''): IAmazonStorageService;
 begin
-  Result := TAmazonStorageService.Create;
+  Result := TAmazonStorageService.Create(ABucketName);
 end;
 
 end.
