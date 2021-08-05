@@ -104,6 +104,7 @@ begin
   finally
     LFiles.Free;
   end;
+end;
 ```
 
 ## Upload a file
