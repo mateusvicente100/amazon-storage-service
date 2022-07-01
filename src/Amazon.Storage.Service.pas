@@ -80,7 +80,8 @@ var
   LTempFolder: array[0..MAX_PATH] of Char;
 begin
   GetTempPath(MAX_PATH, @LTempFolder);
-  LFilePath := StrPas(LTempFolder) + FormatDateTime('hhmmss', Now) + Random(1000).ToString + AFileName;
+  LFilePath := StrPas(LTempFolder) + FormatDateTime('hhmmss', Now) + Random(1000).ToString +
+               StringReplace(AFileName,'/','_',[rfReplaceAll, rfIgnoreCase]);
   try
     AFile.Position := 0;
     AFile.SaveToFile(LFilePath);
