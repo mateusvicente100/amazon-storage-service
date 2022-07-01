@@ -4597,7 +4597,11 @@ var
   Grant: TAmazonGrant;
   TypeStr, GranteeStr: string;
 begin
+{$IF RTLVERSION > 32}
   sb := TStringBuilder.Create(256);
+{$ELSE}
+  sb := TStringBuilder.Create;
+{$ENDIF}
   try
     sb.Append(LogXMLPrefix);
 
@@ -4651,7 +4655,11 @@ begin
 
     sb.Append(LogXMLSuffix);
 
+  {$IF RTLVERSION > 32}
     Result := sb.ToString(True);
+  {$ELSE}
+    Result := sb.ToString;
+  {$ENDIF}
   finally
     sb.Free;
   end;
@@ -4705,7 +4713,11 @@ var
   Grant: TAmazonGrant;
   GranteeType: TAmazonGranteeType;
 begin
+{$IF RTLVERSION > 32}
   sb := TStringBuilder.Create(256);
+{$ELSE}
+  sb := TStringBuilder.Create;
+{$ENDIF}
   try
     sb.Append('<AccessControlPolicy><Owner><ID>');
     sb.Append(OwnerId);
@@ -4738,7 +4750,11 @@ begin
     end;
 
     sb.Append('</AccessControlList></AccessControlPolicy>');
+  {$IF RTLVERSION > 32}
     Result := sb.ToString(True);
+  {$ELSE}
+    Result := sb.ToString;
+  {$ENDIF}
   finally
     sb.Free;
   end;
@@ -5087,7 +5103,11 @@ begin
   if (Events = nil) or (Events.Count = 0) then
     Exit('<NotificationConfiguration />');
 
+{$IF RTLVERSION > 32}
   sb := TStringBuilder.Create(256);
+{$ELSE}
+  sb := TStringBuilder.Create;
+{$ENDIF}
   try
     sb.Append('<NotificationConfiguration>');
 
@@ -5101,7 +5121,11 @@ begin
     end;
 
     sb.Append('</NotificationConfiguration>');
+  {$IF RTLVERSION > 32}
     Result := sb.ToString(True);
+  {$ELSE}
+    Result := sb.ToString;
+  {$ENDIF}
   finally
     sb.Free;
   end;
@@ -6522,7 +6546,11 @@ begin
 
   url := GetConnectionInfo.StorageURL(BucketName, BucketRegion) + '/?requestPayment=';
 
+{$IF RTLVERSION > 32}
   sb := TStringBuilder.Create(256);
+{$ELSE}
+  sb := TStringBuilder.Create;
+{$ENDIF}
   try
     sb.Append('<RequestPaymentConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Payer>');
     if Payer = ampRequester then
@@ -6531,7 +6559,11 @@ begin
       sb.Append('BucketOwner');
     sb.Append('</Payer></RequestPaymentConfiguration>');
 
+  {$IF RTLVERSION > 32}
     xml := sb.ToString(True);
+  {$ELSE}
+    xml := sb.ToString;
+  {$ENDIF}
   finally
     sb.Free;
   end;
@@ -6591,7 +6623,11 @@ begin
 
   url := GetConnectionInfo.StorageURL(BucketName, BucketRegion) + '/?versioning=';
 
+{$IF RTLVERSION > 32}
   sb := TStringBuilder.Create(256);
+{$ELSE}
+  sb := TStringBuilder.Create;
+{$ENDIF}
   try
     sb.Append('<VersioningConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Status>');
     if Enabled then
@@ -6605,7 +6641,11 @@ begin
       sb.Append('Disabled');
     sb.Append('</MfaDelete></VersioningConfiguration>');
 
+  {$IF RTLVERSION > 32}
     xml := sb.ToString(True);
+  {$ELSE}
+    xml := sb.ToString;
+  {$ENDIF}
   finally
     sb.Free;
   end;
@@ -7477,14 +7517,22 @@ begin
 
   url := BuildObjectURL(BucketName, ObjectName, BucketRegion) + '?uploadId=' + URLEncodeValue(UploadId);
 
+{$IF RTLVERSION > 32}
   sb := TStringBuilder.Create(256);
+{$ELSE}
+  sb := TStringBuilder.Create;
+{$ENDIF}
   try
     sb.Append('<CompleteMultipartUpload>');
     for Part In Parts do
       sb.Append(Part.AsXML);
     sb.Append('</CompleteMultipartUpload>');
 
+  {$IF RTLVERSION > 32}
     xml := sb.ToString(True);
+  {$ELSE}
+    xml := sb.ToString;
+  {$ENDIF}
   finally
     sb.Free;
   end;
