@@ -87,7 +87,7 @@ begin
     Self.UploadFile(LFilePath, AFileName);
   finally
     if FileExists(LFilePath) then
-      DeleteFile(LFilePath);
+      Winapi.Windows.DeleteFile(PWideChar(LFilePath));
   end;
 end;
 
